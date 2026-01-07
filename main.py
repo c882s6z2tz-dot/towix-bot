@@ -1,12 +1,5 @@
 from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    ConversationHandler,
-    ContextTypes,
-    filters,
-)
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ConversationHandler, ContextTypes, filters
 
 FROM_ADDRESS, TO_ADDRESS, PHONE, CAR_INFO = range(4)
 
@@ -31,18 +24,8 @@ async def phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def car_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["car"] = update.message.text
-
-    text = (
-        f"📦 Нова заявка Towix:\n"
-        f"Звідки: {context.user_data['from']}\n"
-        f"Куди: {context.user_data['to']}\n"
-        f"Телефон: {context.user_data['phone']}\n"
-        f"Авто: {context.user_data['car']}"
-    )
-
     await update.message.reply_text("✅ Заявку прийнято! Ми скоро з вами звʼяжемось.")
-    print(text)
-
+    print(context.user_data)
     return ConversationHandler.END
 
 def main():
@@ -56,7 +39,7 @@ def main():
             PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, phone)],
             CAR_INFO: [MessageHandler(filters.TEXT & ~filters.COMMAND, car_info)],
         },
-        fallbacks=[],
+        fallbacks=[]
     )
 
     app.add_handler(conv)

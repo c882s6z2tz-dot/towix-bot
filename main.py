@@ -1,101 +1,66 @@
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram import Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ConversationHandler,
+    ContextTypes,
+    filters,
+)
 
-OWNER_ID = 8579215373
-PRICE_PER_KM = 0.6
+FROM_ADDRESS, TO_ADDRESS, PHONE, CAR_INFO = range(4)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.clear()
     await update.message.reply_text("Звідки забрати авто? (Країна, місто, вулиця)")
+    return FROM_ADDRESS
 
-async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    t = update.message.text
-    d = context.user_data
+async def from_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["from"] = update.message.text
+    await update.message.reply_text("Куди потрібно доставити авто?")
+    return TO_ADDRESS
 
-    if "from_place" not in d:
-        d["from_place"] = t
-        await update.message.reply_text("Куди потрібно доставити авто?")
-        return
+async def to_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["to"] = update.message.text
+    await update.message.reply_text("Ваш номер телефону?")
+    return PHONE
 
-    if "to_place" not in d:
-        d["to_place"] = t
-        await update.message.reply_text("Скільки кілометрів приблизно?")
-        return
+async def phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["phone"] = update.message.text
+    await update.message.reply_text("Марка, модель, рік авто?")
+    return CAR_INFO
 
-    if "km" not in d:
-        if not t.isdigit():
-            await update.message.reply_text("Введіть тільки число.")
-            return
-        d["km"] = int(t)
-        d["price"] = int(d["km"] * PRICE_PER_KM)
-        kb = ReplyKeyboardMarkup([["Подати заявку","Скасувати"]], resize_keyboard=True)
-        await update.message.reply_text(f"Сума доставки: {d['price']} €\nПодавати заявку?", reply_markup=kb)
-        return
+async def car_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["car"] = update.message.text
 
-    if "confirm" not in d:
-        if t == "Скасувати":
-            d.clear()
-            await update.message.reply_text("Заявку скасовано. Напишіть /start")
-            return
-        d["confirm"] = True
-        await update.message.reply_text("Ваше імʼя?")
-        return
+    text = (
+        f"📦 Нова заявка Towix:\n"
+        f"Звідки: {context.user_data['from']}\n"
+        f"Куди: {context.user_data['to']}\n"
+        f"Телефон: {context.user_data['phone']}\n"
+        f"Авто: {context.user_data['car']}"
+    )
 
-    if "name" not in d:
-        d["name"] = t
-        await update.message.reply_text("Ваш номер телефону?")
-        return
+    await update.message.reply_text("✅ Заявку прийнято! Ми скоро з вами звʼяжемось.")
+    print(text)
 
-    if "phone" not in d:
-        d["phone"] = t
-        await update.message.reply_text("Марка, модель, рік авто?")
-        return
-
-    if "car" not in d:
-        d["car"] = t
-        kb = ReplyKeyboardMarkup([["На ходу","Не на ходу"]], resize_keyboard=True)
-        await update.message.reply_text("Стан авто?", reply_markup=kb)
-        return
-
-    if "status" not in d:
-        d["status"] = t
-        await update.message.reply_text("Країна реєстрації авто?")
-        return
-
-    if "reg_country" not in d:
-        d["reg_country"] = t
-        kb = ReplyKeyboardMarkup([["Потрібне розмитнення","Не потрібно"]], resize_keyboard=True)
-        await update.message.reply_text("Чи потрібне розмитнення?", reply_markup=kb)
-        return
-
-    if "customs" not in d:
-        d["customs"] = t
-
-        text = f"""
-🚚 НОВА ЗАЯВКА TOWIX
-
-Звідки: {d['from_place']}
-Куди: {d['to_place']}
-Км: {d['km']}
-Ціна: {d['price']} €
-
-Клієнт: {d['name']}
-Телефон: {d['phone']}
-Авто: {d['car']}
-Стан: {d['status']}
-Реєстрація: {d['reg_country']}
-Розмитнення: {d['customs']}
-"""
-
-        await context.bot.send_message(chat_id=OWNER_ID, text=text)
-        await update.message.reply_text("Дякуємо! Ваша заявка відправлена менеджеру.")
-        d.clear()
+    return ConversationHandler.END
 
 def main():
     app = ApplicationBuilder().token("AAHfRO4tUnJIaWg4sNpyEXTcV5mIfRNjN4").build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handler))
+
+    conv = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            FROM_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, from_address)],
+            TO_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, to_address)],
+            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, phone)],
+            CAR_INFO: [MessageHandler(filters.TEXT & ~filters.COMMAND, car_info)],
+        },
+        fallbacks=[],
+    )
+
+    app.add_handler(conv)
     app.run_polling()
 
-if __name__ == "__main__":
+if name == "__main__":
     main()

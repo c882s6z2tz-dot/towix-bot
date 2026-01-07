@@ -1,7 +1,7 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-OWNER_ID = ВСТАВ_СВІЙ_ID
+OWNER_ID = 8579215373
 PRICE_PER_KM = 0.6
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -92,7 +92,7 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         d.clear()
 
 def main():
-    app = ApplicationBuilder().token("ВСТАВ_СВІЙ_TOKEN").build()
+    app = ApplicationBuilder().token("AAHfRO4tUnJIaWg4sNpyEXTcV5mIfRNjN4").build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handler))
     app.run_polling()
